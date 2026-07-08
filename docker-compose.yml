@@ -26,6 +26,7 @@ services:
       - .env
     # comment out if you want to externally call skyvern API
     ports:
+      - "0.0.0.0:8000:8000"  # Accept connections from any IP
       - 8000:8000
       - 6080:6080 # for VNC WebSocket streaming
       - 9222:9222 # for cdp browser forwarding
@@ -150,6 +151,22 @@ services:
     depends_on:
       skyvern:
         condition: service_healthy
+  bacb-registry-check:
+    image: public.ecr.aws/skyvern/skyvern:latest
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    entrypoint: ["python", "-m", "bacb_registry_check"]
+    command: ["serve", "--host", "0.0.0.0", "--port", "8765"]
+    ports:
+      - 8765:8765
+    volumes:
+      - ./bacb_registry_check:/app/bacb_registry_check:ro
+      - ./artifacts/bacb-registry:/data/bacb-registry
+    environment:
+      - BACB_CDP_URL=${BACB_CDP_URL:-http://192.168.65.254:9222/}
+      - BACB_SCREENSHOT_DIR=/data/bacb-registry
+      - BACB_PUBLIC_BASE_URL=${BACB_PUBLIC_BASE_URL:-http://127.0.0.1:8765}
 
 # uncomment for local usage of `vaultwarden` & bitwarden-cli - see more at: https://github.com/dani-garcia/vaultwarden
 # First this container needs to be started and configured to sign up, create master password and organization
